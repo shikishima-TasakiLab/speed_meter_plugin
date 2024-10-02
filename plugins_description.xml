@@ -1,0 +1,7 @@
+<library path="speed_meter_plugin">
+    <class name="Speed Meter" type="speed_meter_plugin::SpeedMeterPlugin" base_class_type="rviz_common::Panel">
+        <description>
+            Speed Meter on RViz2
+        </description>
+    </class>
+</library>

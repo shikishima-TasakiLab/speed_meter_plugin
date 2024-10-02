@@ -11,21 +11,37 @@ find_package(ament_cmake_ros REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rviz_common REQUIRED)
-find_package(libqt5-widgets REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(Qt5 ${rviz_QT_VERSION} REQUIRED Core Widgets)
+macro(qt_wrap_ui)
+  qt5_wrap_ui(${ARGN})
+endmacro()
 
-add_library(speed_meter_plugin src/speed_meter_plugin.cpp)
-add_library(speed_meter_plugin::speed_meter_plugin ALIAS speed_meter_plugin)
+add_definitions(-DQT_NO_KEYWORDS)
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+
+pluginlib_export_plugin_description_file(rviz_common plugins_description.xml)
+
+add_library(speed_meter_plugin SHARED
+  include/speed_meter_plugin/speed_meter_plugin.hpp
+  src/speed_meter_plugin.cpp
+)
+
 target_compile_features(speed_meter_plugin PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 target_include_directories(speed_meter_plugin PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>)
+  $<INSTALL_INTERFACE:include>
+  ${Qt5Core_INCLUDE_DIRS}
+  ${Qt5Widgets_INCLUDE_DIRS}
+)
 ament_target_dependencies(
   speed_meter_plugin
   "rclcpp"
   "pluginlib"
+  "Qt5"
   "rviz_common"
-  "libqt5-widgets"
   "std_msgs"
 )
 
