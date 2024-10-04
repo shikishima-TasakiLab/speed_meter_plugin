@@ -11,13 +11,14 @@ find_package(ament_cmake_ros REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rviz_common REQUIRED)
+find_package(rviz_ogre_vendor REQUIRED)
+find_package(rviz_rendering REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(Qt5 ${rviz_QT_VERSION} REQUIRED Core Widgets)
-macro(qt_wrap_ui)
-  qt5_wrap_ui(${ARGN})
-endmacro()
 
-add_definitions(-DQT_NO_KEYWORDS)
+# include_directories(src ${OGRE_INCLUDE_DIRS} ${OGRE_INCLUDE_DIRS}/Paging)
+
+# add_definitions(-DQT_NO_KEYWORDS)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
@@ -42,6 +43,7 @@ ament_target_dependencies(
   "pluginlib"
   "Qt5"
   "rviz_common"
+  "rviz_rendering"
   "std_msgs"
 )
 

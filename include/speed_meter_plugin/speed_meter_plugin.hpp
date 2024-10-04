@@ -4,6 +4,8 @@
 #include "speed_meter_plugin/visibility_control.h"
 
 #ifndef Q_MOC_RUN
+#include <QObject>
+
 #include <rclcpp/rclcpp.hpp>
 #include <rviz_common/display.hpp>
 #include <rviz_common/display_context.hpp>
@@ -14,6 +16,15 @@
 #include <rviz_common/properties/float_property.hpp>
 #include <rviz_common/properties/ros_topic_property.hpp>
 #include <rviz_common/properties/string_property.hpp>
+#include <rviz_common/render_panel.hpp>
+#include <rviz_common/uniform_string_stream.hpp>
+#include <rviz_rendering/material_manager.hpp>
+#include <rviz_rendering/render_window.hpp>
+#include <OgreRectangle2D.h>
+#include <OgreMaterial.h>
+#include <OgreSharedPtr.h>
+#include <OgreTechnique.h>
+
 #include <std_msgs/msg/float32.hpp>
 #include <std_msgs/msg/float64.hpp>
 #endif
@@ -46,6 +57,8 @@ namespace speed_meter_plugin
     void reset();
     void subscribe();
     void unsubscribe();
+    void setupScreenRectangle();
+    void setupRenderPanel();
 
   protected Q_SLOTS:
     // void updateQosProfile();
@@ -89,10 +102,14 @@ namespace speed_meter_plugin
     std::unique_ptr<rviz_common::properties::ColorProperty> bg_color_property_;
     std::unique_ptr<rviz_common::properties::Property> scale_property_;
     std::unique_ptr<rviz_common::properties::ColorProperty> scale_color_property_;
-    
+
     double_t l_speed_value_{0.0};
     double_t t_speed_value_{0.0};
     double_t c_speed_value_{0.0};
+
+    std::unique_ptr<Ogre::Rectangle2D> screen_rect_;
+    Ogre::MaterialPtr material_;
+    std::unique_ptr<rviz_common::RenderPanel> render_panel_;
   };
 
 } // namespace speed_meter_plugin

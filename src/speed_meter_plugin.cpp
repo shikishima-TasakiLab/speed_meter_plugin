@@ -49,6 +49,15 @@ namespace speed_meter_plugin
     l_speed_topic_property_->initialize(rviz_ros_node);
     t_speed_topic_property_->initialize(rviz_ros_node);
     c_speed_topic_property_->initialize(rviz_ros_node);
+
+    setupScreenRectangle();
+    setupRenderPanel();
+
+    render_panel_->getRenderWindow()->setupSceneAfterInit(
+        [this](Ogre::SceneNode *scene_node)
+        {
+          scene_node->attachObject(screen_rect_.get());
+        });
   }
 
   // void SpeedMeterPlugin::updateQosProfile()
@@ -260,6 +269,66 @@ namespace speed_meter_plugin
   {
     (void)dt;
     (void)ros_dt;
+
+    // make sure the aspect ratio of the image is preserved
+    float win_width = render_panel_->width();
+    float win_height = render_panel_->height();
+
+    if (win_width != 0.0f && win_height != 0.0f)
+    {
+      float win_aspect = win_width / win_height;
+
+      if (win_aspect < 1.0f)
+      {
+        screen_rect_->setCorners(
+            -1.0f, 1.0f * win_aspect, 1.0f, -1.0f * win_aspect, false);
+      }
+      else
+      {
+        screen_rect_->setCorners(
+            -1.0f / win_aspect, 1.0f, 1.0f / win_aspect, -1.0f, false);
+      }
+    }
+  }
+
+  void SpeedMeterPlugin::setupScreenRectangle()
+  {
+    static int count = 0;
+    rviz_common::UniformStringStream uss;
+    uss << "SpeedMeterObject" << count++;
+
+    screen_rect_ = std::make_unique<Ogre::Rectangle2D>(true);
+    screen_rect_->setRenderQueueGroup(Ogre::RENDER_QUEUE_OVERLAY - 1);
+    screen_rect_->setCorners(-1.0f, 1.0f, 1.0f, -1.0f);
+
+    uss << "Material";
+    material_ = rviz_rendering::MaterialManager::createMaterialWithNoLighting(uss.str());
+    material_->setSceneBlending(Ogre::SBT_REPLACE);
+    material_->setDepthWriteEnabled(false);
+    material_->setDepthCheckEnabled(false);
+
+    Ogre::TextureUnitState *tu =
+        material_->getTechnique(0)->getPass(0)->createTextureUnitState();
+    // tu->setTextureName(texture_->getName());
+    tu->setTextureFiltering(Ogre::TFO_NONE);
+
+    material_->setCullingMode(Ogre::CULL_NONE);
+    Ogre::AxisAlignedBox aabInf;
+    aabInf.setInfinite();
+    screen_rect_->setBoundingBox(aabInf);
+    screen_rect_->setMaterial(material_);
+  }
+
+  void SpeedMeterPlugin::setupRenderPanel()
+  {
+    render_panel_ = std::make_unique<rviz_common::RenderPanel>();
+    render_panel_->resize(256, 256);
+    render_panel_->initialize(context_);
+    setAssociatedWidget(render_panel_.get());
+
+    static int count = 0;
+    render_panel_->getRenderWindow()->setObjectName(
+        "SpeedMeterRenderWindow" + QString::number(count++));
   }
 
 } // namespace speed_meter_plugin
