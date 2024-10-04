@@ -4,7 +4,9 @@
 #include "speed_meter_plugin/visibility_control.h"
 
 #ifndef Q_MOC_RUN
-#include <QObject>
+#include <QtWidgets/QWidget>
+#include <QtWidgets/QLabel>
+#include <QtWidgets/QVBoxLayout>
 
 #include <rclcpp/rclcpp.hpp>
 #include <rviz_common/display.hpp>
@@ -16,26 +18,26 @@
 #include <rviz_common/properties/float_property.hpp>
 #include <rviz_common/properties/ros_topic_property.hpp>
 #include <rviz_common/properties/string_property.hpp>
-#include <rviz_common/render_panel.hpp>
 #include <rviz_common/uniform_string_stream.hpp>
-#include <rviz_rendering/material_manager.hpp>
-#include <rviz_rendering/render_window.hpp>
-#include <OgreRectangle2D.h>
-#include <OgreMaterial.h>
-#include <OgreSharedPtr.h>
-#include <OgreTechnique.h>
 
 #include <std_msgs/msg/float32.hpp>
 #include <std_msgs/msg/float64.hpp>
 #endif
 
-namespace rviz_common
+namespace Ui
 {
-  namespace properties
-  {
-    class ColorProperty;
-  }
-}
+
+    // class SpeedMeter;
+
+} // namespace Ui
+
+// namespace rviz_common
+// {
+//   namespace properties
+//   {
+//     class ColorProperty;
+//   }
+// }
 
 namespace speed_meter_plugin
 {
@@ -57,8 +59,7 @@ namespace speed_meter_plugin
     void reset();
     void subscribe();
     void unsubscribe();
-    void setupScreenRectangle();
-    void setupRenderPanel();
+    void setupPanel();
 
   protected Q_SLOTS:
     // void updateQosProfile();
@@ -107,9 +108,7 @@ namespace speed_meter_plugin
     double_t t_speed_value_{0.0};
     double_t c_speed_value_{0.0};
 
-    std::unique_ptr<Ogre::Rectangle2D> screen_rect_;
-    Ogre::MaterialPtr material_;
-    std::unique_ptr<rviz_common::RenderPanel> render_panel_;
+    std::unique_ptr<QWidget> panel_;
   };
 
 } // namespace speed_meter_plugin
