@@ -14,7 +14,7 @@ find_package(rviz_common REQUIRED)
 find_package(rviz_ogre_vendor REQUIRED)
 find_package(rviz_rendering REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(Qt5 ${rviz_QT_VERSION} REQUIRED Core Widgets)
+find_package(Qt5 ${rviz_QT_VERSION} REQUIRED Core Widgets Gui)
 
 # include_directories(src ${OGRE_INCLUDE_DIRS} ${OGRE_INCLUDE_DIRS}/Paging)
 
