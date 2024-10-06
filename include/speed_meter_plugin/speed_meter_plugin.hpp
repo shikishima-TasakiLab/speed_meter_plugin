@@ -4,6 +4,7 @@
 #include "speed_meter_plugin/visibility_control.h"
 
 #ifndef Q_MOC_RUN
+#include <QtGui/QPainter>
 #include <QtWidgets/QWidget>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QVBoxLayout>
@@ -24,12 +25,10 @@
 #include <std_msgs/msg/float64.hpp>
 #endif
 
-namespace Ui
-{
-
-    // class SpeedMeter;
-
-} // namespace Ui
+// namespace Ui
+// {
+//     // class SpeedMeter;
+// } // namespace Ui
 
 // namespace rviz_common
 // {
@@ -41,6 +40,34 @@ namespace Ui
 
 namespace speed_meter_plugin
 {
+  struct speed
+  {
+    QString name;
+    double value{0.0};
+    double min;
+    double max;
+    std::mutex mutex;
+    size_t received_cnt{0UL};
+  };
+
+  class SpeedMeterWidget : public QWidget
+  {
+    Q_OBJECT
+  public:
+    SpeedMeterWidget(
+        speed *l_speed_ptr,
+        speed *t_speed_ptr,
+        speed *c_speed_ptr,
+        QWidget *parent = nullptr);
+
+  protected:
+    void paintEvent(QPaintEvent *event) override;
+
+  private:
+    speed *l_speed_;
+    speed *t_speed_;
+    speed *c_speed_;
+  };
 
   class SpeedMeterPlugin : public rviz_common::Display
   {
@@ -70,7 +97,6 @@ namespace speed_meter_plugin
 
   protected:
     // int queue_size_{5};
-    size_t messages_received_{0};
 
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr l_speed_float32_sub_;
     rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr l_speed_float64_sub_;
@@ -79,9 +105,9 @@ namespace speed_meter_plugin
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr c_speed_float32_sub_;
     rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr c_speed_float64_sub_;
 
-    std::mutex l_speed_mutex_;
-    std::mutex t_speed_mutex_;
-    std::mutex c_speed_mutex_;
+    speed l_speed_;
+    speed t_speed_;
+    speed c_speed_;
 
   private:
     // rmw_qos_profile_t qos_profile_;
@@ -104,11 +130,7 @@ namespace speed_meter_plugin
     std::unique_ptr<rviz_common::properties::Property> scale_property_;
     std::unique_ptr<rviz_common::properties::ColorProperty> scale_color_property_;
 
-    double_t l_speed_value_{0.0};
-    double_t t_speed_value_{0.0};
-    double_t c_speed_value_{0.0};
-
-    std::unique_ptr<QWidget> panel_;
+    std::unique_ptr<SpeedMeterWidget> panel_;
   };
 
 } // namespace speed_meter_plugin

@@ -2,9 +2,28 @@
 
 namespace speed_meter_plugin
 {
+  SpeedMeterWidget::SpeedMeterWidget(
+      speed *l_speed_ptr,
+      speed *t_speed_ptr,
+      speed *c_speed_ptr,
+      QWidget *parent)
+      : QWidget(parent), l_speed_(l_speed_ptr), t_speed_(t_speed_ptr), c_speed_(c_speed_ptr)
+  {
+  }
+
+  void SpeedMeterWidget::paintEvent(QPaintEvent *event)
+  {
+    QWidget::paintEvent(event);
+
+    QPainter painter(this);
+  }
 
   SpeedMeterPlugin::SpeedMeterPlugin()
   {
+    l_speed_.name = "Speed Limit";
+    t_speed_.name = "Target Speed";
+    c_speed_.name = "Current Speed";
+
     // qos_profile_ = rmw_qos_profile_sensor_data;
     // reliability_policy_property_ = std::make_unique<rviz_common::properties::EditableEnumProperty>("Reliability Policy", "Best effort", "", this, SLOT(updateQosProfile()));
     // reliability_policy_property_->addOption("System Default");
@@ -116,6 +135,7 @@ namespace speed_meter_plugin
   {
     unsubscribe();
     reset();
+    subscribe();
   }
 
   void SpeedMeterPlugin::onEnable()
@@ -130,11 +150,26 @@ namespace speed_meter_plugin
 
   void SpeedMeterPlugin::reset()
   {
-    messages_received_ = 0;
-    setStatus(rviz_common::properties::StatusProperty::Ok, "Speed Limit", "0 messages received");
-    setStatus(rviz_common::properties::StatusProperty::Ok, "Target Speed", "0 messages received");
-    setStatus(rviz_common::properties::StatusProperty::Ok, "Current Speed", "0 messages received");
-    setStatus(rviz_common::properties::StatusProperty::Ok, "Message", "Ok");
+    l_speed_.received_cnt = 0UL;
+    t_speed_.received_cnt = 0UL;
+    c_speed_.received_cnt = 0UL;
+
+    setStatus(
+        rviz_common::properties::StatusProperty::Ok,
+        l_speed_.name,
+        QString::number(l_speed_.received_cnt) + " messages received");
+    setStatus(
+        rviz_common::properties::StatusProperty::Ok,
+        t_speed_.name,
+        QString::number(t_speed_.received_cnt) + " messages received");
+    setStatus(
+        rviz_common::properties::StatusProperty::Ok,
+        c_speed_.name,
+        QString::number(c_speed_.received_cnt) + " messages received");
+    setStatus(
+        rviz_common::properties::StatusProperty::Ok,
+        "Message",
+        "Ok");
   }
 
   void SpeedMeterPlugin::subscribe()
@@ -159,8 +194,13 @@ namespace speed_meter_plugin
                                        rclcpp::SensorDataQoS(),
                                        [this](std_msgs::msg::Float64::ConstSharedPtr msg)
                                        {
-                                         std::lock_guard<std::mutex> lock(l_speed_mutex_);
-                                         l_speed_value_ = msg->data;
+                                         std::lock_guard<std::mutex> lock(l_speed_.mutex);
+                                         l_speed_.value = msg->data;
+                                         l_speed_.received_cnt++;
+                                         setStatus(
+                                             rviz_common::properties::StatusProperty::Ok,
+                                             l_speed_.name,
+                                             QString::number(l_speed_.received_cnt) + " messages received");
                                        });
         break;
       default:
@@ -172,8 +212,13 @@ namespace speed_meter_plugin
                                        rclcpp::SensorDataQoS(),
                                        [this](std_msgs::msg::Float32::ConstSharedPtr msg)
                                        {
-                                         std::lock_guard<std::mutex> lock(l_speed_mutex_);
-                                         l_speed_value_ = msg->data;
+                                         std::lock_guard<std::mutex> lock(l_speed_.mutex);
+                                         l_speed_.value = msg->data;
+                                         l_speed_.received_cnt++;
+                                         setStatus(
+                                             rviz_common::properties::StatusProperty::Ok,
+                                             l_speed_.name,
+                                             QString::number(l_speed_.received_cnt) + " messages received");
                                        });
         break;
       }
@@ -193,8 +238,13 @@ namespace speed_meter_plugin
                                        rclcpp::SensorDataQoS(),
                                        [this](std_msgs::msg::Float64::ConstSharedPtr msg)
                                        {
-                                         std::lock_guard<std::mutex> lock(t_speed_mutex_);
-                                         t_speed_value_ = msg->data;
+                                         std::lock_guard<std::mutex> lock(t_speed_.mutex);
+                                         t_speed_.value = msg->data;
+                                         t_speed_.received_cnt++;
+                                         setStatus(
+                                             rviz_common::properties::StatusProperty::Ok,
+                                             t_speed_.name,
+                                             QString::number(t_speed_.received_cnt) + " messages received");
                                        });
         break;
       default:
@@ -206,8 +256,13 @@ namespace speed_meter_plugin
                                        rclcpp::SensorDataQoS(),
                                        [this](std_msgs::msg::Float32::ConstSharedPtr msg)
                                        {
-                                         std::lock_guard<std::mutex> lock(t_speed_mutex_);
-                                         t_speed_value_ = msg->data;
+                                         std::lock_guard<std::mutex> lock(t_speed_.mutex);
+                                         t_speed_.value = msg->data;
+                                         t_speed_.received_cnt++;
+                                         setStatus(
+                                             rviz_common::properties::StatusProperty::Ok,
+                                             t_speed_.name,
+                                             QString::number(t_speed_.received_cnt) + " messages received");
                                        });
         break;
       }
@@ -227,8 +282,13 @@ namespace speed_meter_plugin
                                        rclcpp::SensorDataQoS(),
                                        [this](std_msgs::msg::Float64::ConstSharedPtr msg)
                                        {
-                                         std::lock_guard<std::mutex> lock(c_speed_mutex_);
-                                         c_speed_value_ = msg->data;
+                                         std::lock_guard<std::mutex> lock(c_speed_.mutex);
+                                         c_speed_.value = msg->data;
+                                         c_speed_.received_cnt++;
+                                         setStatus(
+                                             rviz_common::properties::StatusProperty::Ok,
+                                             c_speed_.name,
+                                             QString::number(c_speed_.received_cnt) + " messages received");
                                        });
         break;
       default:
@@ -240,8 +300,13 @@ namespace speed_meter_plugin
                                        rclcpp::SensorDataQoS(),
                                        [this](std_msgs::msg::Float32::ConstSharedPtr msg)
                                        {
-                                         std::lock_guard<std::mutex> lock(c_speed_mutex_);
-                                         c_speed_value_ = msg->data;
+                                         std::lock_guard<std::mutex> lock(c_speed_.mutex);
+                                         c_speed_.value = msg->data;
+                                         c_speed_.received_cnt++;
+                                         setStatus(
+                                             rviz_common::properties::StatusProperty::Ok,
+                                             c_speed_.name,
+                                             QString::number(c_speed_.received_cnt) + " messages received");
                                        });
         break;
       }
@@ -262,12 +327,15 @@ namespace speed_meter_plugin
   {
     (void)dt;
     (void)ros_dt;
-
   }
 
   void SpeedMeterPlugin::setupPanel()
   {
-    panel_ = std::make_unique<QWidget>();
+    panel_ = std::make_unique<SpeedMeterWidget>(
+        &l_speed_,
+        &t_speed_,
+        &c_speed_);
+    panel_->setMinimumHeight(128);
     setAssociatedWidget(panel_.get());
   }
 
