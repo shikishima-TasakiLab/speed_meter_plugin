@@ -178,7 +178,6 @@ namespace speed_meter_plugin
       return;
 
     int msg_type = msg_type_property_->getOptionInt();
-    auto rviz_ros_node_ = context_->getRosNodeAbstraction().lock();
 
     std::string l_speed_topic = l_speed_topic_property_->getStdString();
     if (!l_speed_topic.empty())
@@ -187,39 +186,11 @@ namespace speed_meter_plugin
       {
       case 1:
         // msg_type = "std_msgs/msg/Float64";
-        l_speed_float64_sub_ = rviz_ros_node_
-                                   ->get_raw_node()
-                                   ->create_subscription<std_msgs::msg::Float64>(
-                                       l_speed_topic,
-                                       rclcpp::SensorDataQoS(),
-                                       [this](std_msgs::msg::Float64::ConstSharedPtr msg)
-                                       {
-                                         std::lock_guard<std::mutex> lock(l_speed_.mutex);
-                                         l_speed_.value = msg->data;
-                                         l_speed_.received_cnt++;
-                                         setStatus(
-                                             rviz_common::properties::StatusProperty::Ok,
-                                             l_speed_.name,
-                                             QString::number(l_speed_.received_cnt) + " messages received");
-                                       });
+        l_speed_sub_ = create_speed_sub<std_msgs::msg::Float64>(l_speed_, l_speed_topic);
         break;
       default:
         // msg_type = "std_msgs/msg/Float32";
-        l_speed_float32_sub_ = rviz_ros_node_
-                                   ->get_raw_node()
-                                   ->create_subscription<std_msgs::msg::Float32>(
-                                       l_speed_topic,
-                                       rclcpp::SensorDataQoS(),
-                                       [this](std_msgs::msg::Float32::ConstSharedPtr msg)
-                                       {
-                                         std::lock_guard<std::mutex> lock(l_speed_.mutex);
-                                         l_speed_.value = msg->data;
-                                         l_speed_.received_cnt++;
-                                         setStatus(
-                                             rviz_common::properties::StatusProperty::Ok,
-                                             l_speed_.name,
-                                             QString::number(l_speed_.received_cnt) + " messages received");
-                                       });
+        l_speed_sub_ = create_speed_sub<std_msgs::msg::Float32>(l_speed_, l_speed_topic);
         break;
       }
     }
@@ -231,39 +202,11 @@ namespace speed_meter_plugin
       {
       case 1:
         // msg_type = "std_msgs/msg/Float64";
-        t_speed_float64_sub_ = rviz_ros_node_
-                                   ->get_raw_node()
-                                   ->create_subscription<std_msgs::msg::Float64>(
-                                       t_speed_topic,
-                                       rclcpp::SensorDataQoS(),
-                                       [this](std_msgs::msg::Float64::ConstSharedPtr msg)
-                                       {
-                                         std::lock_guard<std::mutex> lock(t_speed_.mutex);
-                                         t_speed_.value = msg->data;
-                                         t_speed_.received_cnt++;
-                                         setStatus(
-                                             rviz_common::properties::StatusProperty::Ok,
-                                             t_speed_.name,
-                                             QString::number(t_speed_.received_cnt) + " messages received");
-                                       });
+        t_speed_sub_ = create_speed_sub<std_msgs::msg::Float64>(t_speed_, t_speed_topic);
         break;
       default:
         // msg_type = "std_msgs/msg/Float32";
-        t_speed_float32_sub_ = rviz_ros_node_
-                                   ->get_raw_node()
-                                   ->create_subscription<std_msgs::msg::Float32>(
-                                       t_speed_topic,
-                                       rclcpp::SensorDataQoS(),
-                                       [this](std_msgs::msg::Float32::ConstSharedPtr msg)
-                                       {
-                                         std::lock_guard<std::mutex> lock(t_speed_.mutex);
-                                         t_speed_.value = msg->data;
-                                         t_speed_.received_cnt++;
-                                         setStatus(
-                                             rviz_common::properties::StatusProperty::Ok,
-                                             t_speed_.name,
-                                             QString::number(t_speed_.received_cnt) + " messages received");
-                                       });
+        t_speed_sub_ = create_speed_sub<std_msgs::msg::Float32>(t_speed_, t_speed_topic);
         break;
       }
     }
@@ -275,52 +218,45 @@ namespace speed_meter_plugin
       {
       case 1:
         // msg_type = "std_msgs/msg/Float64";
-        c_speed_float64_sub_ = rviz_ros_node_
-                                   ->get_raw_node()
-                                   ->create_subscription<std_msgs::msg::Float64>(
-                                       c_speed_topic,
-                                       rclcpp::SensorDataQoS(),
-                                       [this](std_msgs::msg::Float64::ConstSharedPtr msg)
-                                       {
-                                         std::lock_guard<std::mutex> lock(c_speed_.mutex);
-                                         c_speed_.value = msg->data;
-                                         c_speed_.received_cnt++;
-                                         setStatus(
-                                             rviz_common::properties::StatusProperty::Ok,
-                                             c_speed_.name,
-                                             QString::number(c_speed_.received_cnt) + " messages received");
-                                       });
+        c_speed_sub_ = create_speed_sub<std_msgs::msg::Float64>(c_speed_, c_speed_topic);
         break;
       default:
         // msg_type = "std_msgs/msg/Float32";
-        c_speed_float32_sub_ = rviz_ros_node_
-                                   ->get_raw_node()
-                                   ->create_subscription<std_msgs::msg::Float32>(
-                                       c_speed_topic,
-                                       rclcpp::SensorDataQoS(),
-                                       [this](std_msgs::msg::Float32::ConstSharedPtr msg)
-                                       {
-                                         std::lock_guard<std::mutex> lock(c_speed_.mutex);
-                                         c_speed_.value = msg->data;
-                                         c_speed_.received_cnt++;
-                                         setStatus(
-                                             rviz_common::properties::StatusProperty::Ok,
-                                             c_speed_.name,
-                                             QString::number(c_speed_.received_cnt) + " messages received");
-                                       });
+        c_speed_sub_ = create_speed_sub<std_msgs::msg::Float32>(c_speed_, c_speed_topic);
         break;
       }
     }
   }
 
+  template <typename msgT>
+  typename rclcpp::Subscription<msgT>::SharedPtr SpeedMeterPlugin::create_speed_sub(speed &speed_struct, std::string &topic_name)
+  {
+    auto rviz_ros_node_ = context_->getRosNodeAbstraction().lock();
+    return rviz_ros_node_
+        ->get_raw_node()
+        ->create_subscription<msgT>(
+            topic_name,
+            rclcpp::SensorDataQoS(),
+            [this, &speed_struct](const std::shared_ptr<msgT> msg)
+            {
+              std::lock_guard<std::mutex> lock(speed_struct.mutex);
+              speed_struct.value = msg->data;
+              speed_struct.received_cnt++;
+              setStatus(
+                  rviz_common::properties::StatusProperty::Ok,
+                  speed_struct.name,
+                  QString::number(speed_struct.received_cnt) + " messages received");
+            });
+  }
+
   void SpeedMeterPlugin::unsubscribe()
   {
-    l_speed_float32_sub_.reset();
-    l_speed_float64_sub_.reset();
-    t_speed_float32_sub_.reset();
-    t_speed_float64_sub_.reset();
-    c_speed_float32_sub_.reset();
-    c_speed_float64_sub_.reset();
+    l_speed_sub_.reset();
+    l_speed_sub_.reset();
+    t_speed_sub_.reset();
+    t_speed_sub_.reset();
+    c_speed_sub_.reset();
+    c_speed_sub_.reset();
   }
 
   void SpeedMeterPlugin::update(float dt, float ros_dt)

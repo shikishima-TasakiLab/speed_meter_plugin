@@ -4,6 +4,7 @@
 #include "speed_meter_plugin/visibility_control.h"
 
 #ifndef Q_MOC_RUN
+#include <any>
 #include <QtGui/QPainter>
 #include <QtWidgets/QWidget>
 #include <QtWidgets/QLabel>
@@ -88,6 +89,9 @@ namespace speed_meter_plugin
     void unsubscribe();
     void setupPanel();
 
+    template <typename msgT>
+    typename rclcpp::Subscription<msgT>::SharedPtr create_speed_sub(speed &speed_struct, std::string &topic_name);
+
   protected Q_SLOTS:
     // void updateQosProfile();
     // void updateQueueSize();
@@ -98,12 +102,10 @@ namespace speed_meter_plugin
   protected:
     // int queue_size_{5};
 
-    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr l_speed_float32_sub_;
-    rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr l_speed_float64_sub_;
-    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr t_speed_float32_sub_;
-    rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr t_speed_float64_sub_;
-    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr c_speed_float32_sub_;
-    rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr c_speed_float64_sub_;
+    // rclcpp::Subscription<std::any>::SharedPtr
+    std::any l_speed_sub_;
+    std::any t_speed_sub_;
+    std::any c_speed_sub_;
 
     speed l_speed_;
     speed t_speed_;
