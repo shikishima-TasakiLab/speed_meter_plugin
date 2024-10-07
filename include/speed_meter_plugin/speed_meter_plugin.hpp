@@ -7,6 +7,7 @@
 #include <any>
 #include <QtCore/QTimer>
 #include <QtGui/QPainter>
+#include <QtGui/QPainterPath>
 #include <QtGui/QPalette>
 #include <QtWidgets/QWidget>
 #include <QtWidgets/QLabel>
@@ -49,22 +50,25 @@ namespace speed_meter_plugin
     std::mutex mutex;
     size_t received_cnt{0UL};
     QString name;
-    QColor color;
+    QColor fg;
+    QColor bg;
   };
 
   struct scale_marks
   {
-    double scale;
+    double step;
+    QString name;
     QColor color;
   };
 
   struct meter_scale_marks
   {
-    double min;
-    double max;
+    double range;
+    double zero_offset;
+    double coefficient;
     scale_marks main;
     scale_marks sub;
-    QString unit;
+    scale_marks unit;
   };
 
   class SpeedMeterWidget : public QWidget
@@ -89,7 +93,6 @@ namespace speed_meter_plugin
     speed *t_speed_;
     speed *c_speed_;
     meter_scale_marks *meter_scale_;
-    std::unique_ptr<QTimer> timer_;
   };
 
   class SpeedMeterPlugin : public rviz_common::Display
@@ -102,7 +105,7 @@ namespace speed_meter_plugin
     void onInitialize() override;
     void update(float dt, float ros_dt) override;
     void load(const rviz_common::Config &config) override;
-    void save(rviz_common::Config config) const override;
+    // void save(rviz_common::Config config) const override;
 
   protected:
     void onEnable() override;
@@ -119,11 +122,11 @@ namespace speed_meter_plugin
   protected Q_SLOTS:
     // void updateQosProfile();
     // void updateQueueSize();
-    void updateMessageType();
+    void updateMessageType(QString l_speed_topic = "", QString t_speed_topic = "", QString c_speed_topic = "");
     void updateColor();
     void updateBgColor();
     void updateTopic();
-    void updateUnit();
+    void updateValues();
 
   protected:
     // int queue_size_{5};
@@ -142,21 +145,23 @@ namespace speed_meter_plugin
     // std::unique_ptr<rviz_common::properties::EditableEnumProperty> reliability_policy_property_;
     // std::unique_ptr<rviz_common::properties::IntProperty> queue_size_property_;
     std::unique_ptr<rviz_common::properties::EnumProperty> msg_type_property_;
-    std::unique_ptr<rviz_common::properties::FloatProperty> l_speed_float_property_;
     std::unique_ptr<rviz_common::properties::RosTopicProperty> l_speed_topic_property_;
-    std::unique_ptr<rviz_common::properties::ColorProperty> l_speed_color_property_;
-    std::unique_ptr<rviz_common::properties::FloatProperty> t_speed_float_property_;
+    std::unique_ptr<rviz_common::properties::ColorProperty> l_speed_fg_property_;
     std::unique_ptr<rviz_common::properties::RosTopicProperty> t_speed_topic_property_;
-    std::unique_ptr<rviz_common::properties::ColorProperty> t_speed_color_property_;
-    std::unique_ptr<rviz_common::properties::FloatProperty> c_speed_float_property_;
+    std::unique_ptr<rviz_common::properties::ColorProperty> t_speed_fg_property_;
     std::unique_ptr<rviz_common::properties::RosTopicProperty> c_speed_topic_property_;
-    std::unique_ptr<rviz_common::properties::ColorProperty> c_speed_color_property_;
+    std::unique_ptr<rviz_common::properties::ColorProperty> c_speed_fg_property_;
+    std::unique_ptr<rviz_common::properties::ColorProperty> c_speed_bg_property_;
     std::unique_ptr<rviz_common::properties::StringProperty> unit_property_;
     std::unique_ptr<rviz_common::properties::FloatProperty> coefficient_property_;
-    std::unique_ptr<rviz_common::properties::Property> bg_property_;
+    std::unique_ptr<rviz_common::properties::ColorProperty> unit_color_property_;
     std::unique_ptr<rviz_common::properties::ColorProperty> bg_color_property_;
-    std::unique_ptr<rviz_common::properties::Property> scale_property_;
-    std::unique_ptr<rviz_common::properties::ColorProperty> scale_color_property_;
+    std::unique_ptr<rviz_common::properties::ColorProperty> scale_main_color_property_;
+    std::unique_ptr<rviz_common::properties::FloatProperty> scale_range_property_;
+    std::unique_ptr<rviz_common::properties::FloatProperty> scale_zero_offset_property_;
+    std::unique_ptr<rviz_common::properties::FloatProperty> scale_main_step_property_;
+    std::unique_ptr<rviz_common::properties::FloatProperty> scale_sub_step_property_;
+    std::unique_ptr<rviz_common::properties::ColorProperty> scale_sub_color_property_;
 
     std::unique_ptr<SpeedMeterWidget> panel_;
     QColor bg_color_;
