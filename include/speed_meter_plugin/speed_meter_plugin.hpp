@@ -5,7 +5,9 @@
 
 #ifndef Q_MOC_RUN
 #include <any>
+#include <QtCore/QTimer>
 #include <QtGui/QPainter>
+#include <QtGui/QPalette>
 #include <QtWidgets/QWidget>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QVBoxLayout>
@@ -43,12 +45,26 @@ namespace speed_meter_plugin
 {
   struct speed
   {
-    QString name;
     double value{0.0};
-    double min;
-    double max;
     std::mutex mutex;
     size_t received_cnt{0UL};
+    QString name;
+    QColor color;
+  };
+
+  struct scale_marks
+  {
+    double scale;
+    QColor color;
+  };
+
+  struct meter_scale_marks
+  {
+    double min;
+    double max;
+    scale_marks main;
+    scale_marks sub;
+    QString unit;
   };
 
   class SpeedMeterWidget : public QWidget
@@ -59,7 +75,11 @@ namespace speed_meter_plugin
         speed *l_speed_ptr,
         speed *t_speed_ptr,
         speed *c_speed_ptr,
+        meter_scale_marks *meter_scale_ptr,
+        QColor *bg_color_ptr,
         QWidget *parent = nullptr);
+
+    void changeBgColor(QColor *bg_color);
 
   protected:
     void paintEvent(QPaintEvent *event) override;
@@ -68,6 +88,8 @@ namespace speed_meter_plugin
     speed *l_speed_;
     speed *t_speed_;
     speed *c_speed_;
+    meter_scale_marks *meter_scale_;
+    std::unique_ptr<QTimer> timer_;
   };
 
   class SpeedMeterPlugin : public rviz_common::Display
@@ -79,6 +101,8 @@ namespace speed_meter_plugin
 
     void onInitialize() override;
     void update(float dt, float ros_dt) override;
+    void load(const rviz_common::Config &config) override;
+    void save(rviz_common::Config config) const override;
 
   protected:
     void onEnable() override;
@@ -97,7 +121,9 @@ namespace speed_meter_plugin
     // void updateQueueSize();
     void updateMessageType();
     void updateColor();
+    void updateBgColor();
     void updateTopic();
+    void updateUnit();
 
   protected:
     // int queue_size_{5};
@@ -133,6 +159,8 @@ namespace speed_meter_plugin
     std::unique_ptr<rviz_common::properties::ColorProperty> scale_color_property_;
 
     std::unique_ptr<SpeedMeterWidget> panel_;
+    QColor bg_color_;
+    meter_scale_marks meter_scale_;
   };
 
 } // namespace speed_meter_plugin

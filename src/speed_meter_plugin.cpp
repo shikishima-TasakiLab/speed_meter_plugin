@@ -6,16 +6,48 @@ namespace speed_meter_plugin
       speed *l_speed_ptr,
       speed *t_speed_ptr,
       speed *c_speed_ptr,
+      meter_scale_marks *meter_scale_ptr,
+      QColor *bg_color_ptr,
       QWidget *parent)
-      : QWidget(parent), l_speed_(l_speed_ptr), t_speed_(t_speed_ptr), c_speed_(c_speed_ptr)
+      : QWidget(parent), l_speed_(l_speed_ptr), t_speed_(t_speed_ptr), c_speed_(c_speed_ptr), meter_scale_(meter_scale_ptr)
   {
+    changeBgColor(bg_color_ptr);
+
+    timer_ = std::make_unique<QTimer>(this);
+    connect(timer_.get(), &QTimer::timeout, this, QOverload<>::of(&SpeedMeterWidget::update));
+    timer_->start(200);
+  }
+
+  void SpeedMeterWidget::changeBgColor(QColor *bg_color)
+  {
+    QColor color = (bg_color == nullptr)? Qt::black : *bg_color;
+
+    QPalette bg_pal(palette());
+    bg_pal.setColor(QPalette::Window, color);
+    setAutoFillBackground(true);
+    setPalette(bg_pal);
   }
 
   void SpeedMeterWidget::paintEvent(QPaintEvent *event)
   {
-    QWidget::paintEvent(event);
+    // QWidget::paintEvent(event);
+    (void)event;
+
+    int w_side = qMin(width(), height());
 
     QPainter painter(this);
+
+    painter.translate(width() / 2, height() / 2);
+    painter.scale(w_side / 256.0, w_side / 256.0);
+    
+    painter.setFont(font());
+    painter.setPen(meter_scale_->main.color);
+    painter.save();
+    painter.drawText(QRect(-128, 64, 256, 32), Qt::AlignCenter, meter_scale_->unit);
+    painter.restore();
+
+    
+    painter.setPen(Qt::NoPen);
   }
 
   SpeedMeterPlugin::SpeedMeterPlugin()
@@ -37,23 +69,23 @@ namespace speed_meter_plugin
     l_speed_float_property_ = std::make_unique<rviz_common::properties::FloatProperty>("Speed Limit", 0.0f, "", this);
     l_speed_float_property_->setReadOnly(true);
     l_speed_topic_property_ = std::make_unique<rviz_common::properties::RosTopicProperty>("topic", "", "std_msgs/msg/Float64", "", l_speed_float_property_.get(), SLOT(updateTopic()), this);
-    l_speed_color_property_ = std::make_unique<rviz_common::properties::ColorProperty>("color", QColor(0, 0, 0), "", l_speed_float_property_.get());
+    l_speed_color_property_ = std::make_unique<rviz_common::properties::ColorProperty>("color", QColor(0, 0, 0), "", l_speed_float_property_.get(), SLOT(updateColor()), this);
     t_speed_float_property_ = std::make_unique<rviz_common::properties::FloatProperty>("Target Speed", 0.0f, "", this);
     t_speed_float_property_->setReadOnly(true);
     t_speed_topic_property_ = std::make_unique<rviz_common::properties::RosTopicProperty>("topic", "", "std_msgs/msg/Float64", "", t_speed_float_property_.get(), SLOT(updateTopic()), this);
-    t_speed_color_property_ = std::make_unique<rviz_common::properties::ColorProperty>("color", QColor(0, 0, 0), "", t_speed_float_property_.get());
+    t_speed_color_property_ = std::make_unique<rviz_common::properties::ColorProperty>("color", QColor(0, 0, 0), "", t_speed_float_property_.get(), SLOT(updateColor()), this);
     c_speed_float_property_ = std::make_unique<rviz_common::properties::FloatProperty>("Current Speed", 0.0f, "", this);
     c_speed_float_property_->setReadOnly(true);
     c_speed_topic_property_ = std::make_unique<rviz_common::properties::RosTopicProperty>("topic", "", "std_msgs/msg/Float64", "", c_speed_float_property_.get(), SLOT(updateTopic()), this);
-    c_speed_color_property_ = std::make_unique<rviz_common::properties::ColorProperty>("color", QColor(0, 0, 0), "", c_speed_float_property_.get());
-    unit_property_ = std::make_unique<rviz_common::properties::StringProperty>("Unit", "km/h", "", this);
+    c_speed_color_property_ = std::make_unique<rviz_common::properties::ColorProperty>("color", QColor(0, 0, 0), "", c_speed_float_property_.get(), SLOT(updateColor()), this);
+    unit_property_ = std::make_unique<rviz_common::properties::StringProperty>("Unit", "km/h", "", this, SLOT(updateUnit()), this);
     coefficient_property_ = std::make_unique<rviz_common::properties::FloatProperty>("Coefficient", 3.6f, "", unit_property_.get());
     bg_property_ = std::make_unique<rviz_common::properties::Property>("Background", "", "", this);
     bg_property_->setReadOnly(true);
-    bg_color_property_ = std::make_unique<rviz_common::properties::ColorProperty>("color", QColor(0, 0, 0), "", bg_property_.get());
+    bg_color_property_ = std::make_unique<rviz_common::properties::ColorProperty>("color", QColor(0, 0, 0), "", bg_property_.get(), SLOT(updateBgColor()), this);
     scale_property_ = std::make_unique<rviz_common::properties::Property>("Scale", "", "", this);
     scale_property_->setReadOnly(true);
-    scale_color_property_ = std::make_unique<rviz_common::properties::ColorProperty>("color", QColor(0, 0, 0), "", scale_property_.get());
+    scale_color_property_ = std::make_unique<rviz_common::properties::ColorProperty>("color", QColor(0, 0, 0), "", scale_property_.get(), SLOT(updateColor()), this);
   }
 
   SpeedMeterPlugin::~SpeedMeterPlugin()
@@ -127,8 +159,28 @@ namespace speed_meter_plugin
     unsubscribe();
   }
 
+  void SpeedMeterPlugin::load(const rviz_common::Config &config)
+  {
+    rviz_common::Display::load(config);
+  }
+
+  void SpeedMeterPlugin::save(rviz_common::Config config) const
+  {
+    rviz_common::Display::save(config);
+  }
+
   void SpeedMeterPlugin::updateColor()
   {
+    l_speed_.color = l_speed_color_property_->getColor();
+    t_speed_.color = t_speed_color_property_->getColor();
+    c_speed_.color = c_speed_color_property_->getColor();
+    meter_scale_.main.color = scale_color_property_->getColor();
+  }
+
+  void SpeedMeterPlugin::updateBgColor()
+  {
+    bg_color_ = bg_color_property_->getColor();
+    panel_->changeBgColor(&bg_color_);
   }
 
   void SpeedMeterPlugin::updateTopic()
@@ -136,6 +188,11 @@ namespace speed_meter_plugin
     unsubscribe();
     reset();
     subscribe();
+  }
+
+  void SpeedMeterPlugin::updateUnit()
+  {
+    meter_scale_.unit = unit_property_->getString();
   }
 
   void SpeedMeterPlugin::onEnable()
@@ -270,7 +327,9 @@ namespace speed_meter_plugin
     panel_ = std::make_unique<SpeedMeterWidget>(
         &l_speed_,
         &t_speed_,
-        &c_speed_);
+        &c_speed_,
+        &meter_scale_,
+        &bg_color_);
     panel_->setMinimumHeight(128);
     setAssociatedWidget(panel_.get());
   }
