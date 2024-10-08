@@ -46,12 +46,14 @@ namespace speed_meter_plugin
 {
   struct speed
   {
+    bool enable{false};
     double value{0.0};
     std::mutex mutex;
     size_t received_cnt{0UL};
     QString name;
     QColor fg;
     QColor bg;
+    int fontsize;
   };
 
   struct scale_marks
@@ -59,6 +61,7 @@ namespace speed_meter_plugin
     double step;
     QString name;
     QColor color;
+    int fontsize;
   };
 
   struct meter_scale_marks
@@ -66,6 +69,7 @@ namespace speed_meter_plugin
     double range;
     double zero_offset;
     double coefficient;
+    int precision;
     scale_marks main;
     scale_marks sub;
     scale_marks unit;
@@ -145,16 +149,22 @@ namespace speed_meter_plugin
     // std::unique_ptr<rviz_common::properties::EditableEnumProperty> reliability_policy_property_;
     // std::unique_ptr<rviz_common::properties::IntProperty> queue_size_property_;
     std::unique_ptr<rviz_common::properties::EnumProperty> msg_type_property_;
+    std::unique_ptr<rviz_common::properties::BoolProperty> l_speed_enable_property_;
     std::unique_ptr<rviz_common::properties::RosTopicProperty> l_speed_topic_property_;
     std::unique_ptr<rviz_common::properties::ColorProperty> l_speed_fg_property_;
+    std::unique_ptr<rviz_common::properties::BoolProperty> t_speed_enable_property_;
     std::unique_ptr<rviz_common::properties::RosTopicProperty> t_speed_topic_property_;
     std::unique_ptr<rviz_common::properties::ColorProperty> t_speed_fg_property_;
+    std::unique_ptr<rviz_common::properties::BoolProperty> c_speed_enable_property_;
     std::unique_ptr<rviz_common::properties::RosTopicProperty> c_speed_topic_property_;
     std::unique_ptr<rviz_common::properties::ColorProperty> c_speed_fg_property_;
     std::unique_ptr<rviz_common::properties::ColorProperty> c_speed_bg_property_;
+    std::unique_ptr<rviz_common::properties::IntProperty> c_speed_fontsize_property_;
     std::unique_ptr<rviz_common::properties::StringProperty> unit_property_;
     std::unique_ptr<rviz_common::properties::FloatProperty> coefficient_property_;
+    std::unique_ptr<rviz_common::properties::IntProperty> unit_precision_property_;
     std::unique_ptr<rviz_common::properties::ColorProperty> unit_color_property_;
+    std::unique_ptr<rviz_common::properties::IntProperty> unit_fontsize_property_;
     std::unique_ptr<rviz_common::properties::ColorProperty> bg_color_property_;
     std::unique_ptr<rviz_common::properties::ColorProperty> scale_main_color_property_;
     std::unique_ptr<rviz_common::properties::FloatProperty> scale_range_property_;

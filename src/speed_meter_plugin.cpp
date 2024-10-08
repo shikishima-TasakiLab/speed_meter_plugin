@@ -36,18 +36,130 @@ namespace speed_meter_plugin
     painter.translate(width() / 2, height() / 2);
     painter.scale(w_side / 256.0, w_side / 256.0);
 
-    painter.setFont(font());
-    painter.setPen(meter_scale_->unit.color);
-    painter.setBrush(Qt::NoBrush);
-    painter.drawText(-128, 64, 256, 32, Qt::AlignCenter, meter_scale_->unit.name);
+    double value_min = -meter_scale_->zero_offset;
+    double value_max = value_min + meter_scale_->range;
+    double scale_origin = 300.0 * meter_scale_->zero_offset / meter_scale_->range - 240.0;
+    double step_deg = 300.0 * meter_scale_->sub.step / meter_scale_->range;
+    double theta = scale_origin;
 
-    QPainterPath donut_path;
-    donut_path.arcTo(-64, -64, 128, 128, -120.0, -300.0);
-    donut_path.arcTo(-96, -96, 192, 192, -60.0, 300.0);
+    // Sub Scale
+    {
+      painter.setPen(Qt::NoPen);
+      painter.setBrush(meter_scale_->sub.color);
+      painter.save();
+      painter.rotate(theta);
+      for (; theta <= 60.0; theta += step_deg)
+      {
+        painter.drawRect(97, -1, 6, 2);
+        painter.rotate(step_deg);
+      }
+      painter.restore();
+      painter.save();
+      theta = scale_origin - step_deg;
+      painter.rotate(theta);
+      for (; theta >= -240.0; theta -= step_deg)
+      {
+        painter.drawRect(97, -1, 6, 2);
+        painter.rotate(-step_deg);
+      }
+      painter.restore();
+    }
 
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(c_speed_->bg);
-    painter.drawPath(donut_path);
+    // Main Scale
+    {
+      step_deg = 300.0 * meter_scale_->main.step / meter_scale_->range;
+      theta = scale_origin;
+      painter.setPen(Qt::NoPen);
+      painter.setBrush(meter_scale_->main.color);
+      painter.save();
+      painter.rotate(theta);
+      for (; theta <= 60.0; theta += step_deg)
+      {
+        painter.drawRect(97, -2, 14, 4);
+        painter.rotate(step_deg);
+      }
+      painter.restore();
+      painter.save();
+      theta = scale_origin - step_deg;
+      painter.rotate(theta);
+      for (; theta >= -240.0; theta -= step_deg)
+      {
+        painter.drawRect(97, -2, 14, 4);
+        painter.rotate(-step_deg);
+      }
+      painter.restore();
+    }
+
+    // Unit
+    {
+      QFont font_unit = font();
+      font_unit.setPointSize(meter_scale_->unit.fontsize);
+      painter.setFont(font_unit);
+      painter.setPen(meter_scale_->unit.color);
+      painter.setBrush(Qt::NoBrush);
+      painter.drawText(-128, 64, 256, 32, Qt::AlignCenter, meter_scale_->unit.name);
+    }
+
+    // Current Speed (chart)
+    {
+      QPainterPath bg_path;
+      bg_path.arcTo(-64, -64, 128, 128, 240.0, -300.0);
+      bg_path.arcTo(-96, -96, 192, 192, -60.0, 300.0);
+      painter.setPen(Qt::NoPen);
+      painter.setBrush(c_speed_->bg);
+      painter.drawPath(bg_path);
+    }
+    if (c_speed_->enable)
+    {
+      double c_value = qMin(qMax(value_min, c_speed_->value), value_max);
+      QPainterPath fg_path;
+      theta = -300.0 * c_value / meter_scale_->range;
+      fg_path.arcTo(-64, -64, 128, 128, -scale_origin, theta);
+      fg_path.arcTo(-96, -96, 192, 192, theta - scale_origin, -theta);
+      painter.setPen(Qt::NoPen);
+      painter.setBrush(c_speed_->fg);
+      painter.drawPath(fg_path);
+    }
+
+    // Target Speed
+    if (t_speed_->enable)
+    {
+      painter.setPen(Qt::NoPen);
+      painter.setBrush(t_speed_->fg);
+      double t_value = qMin(qMax(value_min, t_speed_->value), value_max);
+      theta = 300.0 * t_value / meter_scale_->range;
+      painter.save();
+      painter.rotate(scale_origin + theta);
+      painter.drawRect(64, -2, 32, 4);
+      painter.restore();
+    }
+
+    // Speed Limit
+    if (l_speed_->enable)
+    {
+      painter.setPen(Qt::NoPen);
+      painter.setBrush(l_speed_->fg);
+      double l_value = qMin(qMax(value_min, l_speed_->value), value_max);
+      theta = 300.0 * l_value / meter_scale_->range;
+      QPainterPath fg_path;
+      fg_path.moveTo(105, 0);
+      fg_path.lineTo(123, -9);
+      fg_path.lineTo(123, 9);
+      painter.save();
+      painter.rotate(scale_origin + theta);
+      painter.drawPath(fg_path);
+      painter.restore();
+    }
+
+    // Current Speed (text)
+    {
+      QFont font_cs = font();
+      font_cs.setPointSize(c_speed_->fontsize);
+      painter.setFont(font_cs);
+      painter.setPen(meter_scale_->unit.color);
+      painter.setBrush(Qt::NoBrush);
+      painter.drawText(-128, -64, 256, 128, Qt::AlignCenter, QString::number(c_speed_->value, 'f', meter_scale_->precision));
+    }
   }
 
   SpeedMeterPlugin::SpeedMeterPlugin()
@@ -66,16 +178,22 @@ namespace speed_meter_plugin
     msg_type_property_ = std::make_unique<rviz_common::properties::EnumProperty>("Message Type", "std_msgs/msg/Float64", "", this, SLOT(updateMessageType()));
     msg_type_property_->addOption("std_msgs/msg/Float32", 0);
     msg_type_property_->addOption("std_msgs/msg/Float64", 1);
-    l_speed_topic_property_ = std::make_unique<rviz_common::properties::RosTopicProperty>("Speed Limit", "", "std_msgs/msg/Float64", "", this, SLOT(updateTopic()));
-    l_speed_fg_property_ = std::make_unique<rviz_common::properties::ColorProperty>("color", QColor(255, 0, 0), "", l_speed_topic_property_.get(), SLOT(updateColor()), this);
-    t_speed_topic_property_ = std::make_unique<rviz_common::properties::RosTopicProperty>("Target Speed", "", "std_msgs/msg/Float64", "", this, SLOT(updateTopic()));
-    t_speed_fg_property_ = std::make_unique<rviz_common::properties::ColorProperty>("color", QColor(255, 255, 0), "", t_speed_topic_property_.get(), SLOT(updateColor()), this);
-    c_speed_topic_property_ = std::make_unique<rviz_common::properties::RosTopicProperty>("Current Speed", "", "std_msgs/msg/Float64", "", this, SLOT(updateTopic()));
-    c_speed_fg_property_ = std::make_unique<rviz_common::properties::ColorProperty>("fg color", QColor(0, 255, 0), "", c_speed_topic_property_.get(), SLOT(updateColor()), this);
-    c_speed_bg_property_ = std::make_unique<rviz_common::properties::ColorProperty>("bg color", QColor(32, 32, 32), "", c_speed_topic_property_.get(), SLOT(updateColor()), this);
+    l_speed_enable_property_ = std::make_unique<rviz_common::properties::BoolProperty>(l_speed_.name, true, "", this, SLOT(updateValues()));
+    l_speed_topic_property_ = std::make_unique<rviz_common::properties::RosTopicProperty>("topic", "", "std_msgs/msg/Float64", "", l_speed_enable_property_.get(), SLOT(updateTopic()), this);
+    l_speed_fg_property_ = std::make_unique<rviz_common::properties::ColorProperty>("color", QColor(255, 0, 0), "", l_speed_enable_property_.get(), SLOT(updateColor()), this);
+    t_speed_enable_property_ = std::make_unique<rviz_common::properties::BoolProperty>(t_speed_.name, true, "", this, SLOT(updateValues()));
+    t_speed_topic_property_ = std::make_unique<rviz_common::properties::RosTopicProperty>("topic", "", "std_msgs/msg/Float64", "", t_speed_enable_property_.get(), SLOT(updateTopic()), this);
+    t_speed_fg_property_ = std::make_unique<rviz_common::properties::ColorProperty>("color", QColor(255, 255, 0), "", t_speed_enable_property_.get(), SLOT(updateColor()), this);
+    c_speed_enable_property_ = std::make_unique<rviz_common::properties::BoolProperty>(c_speed_.name, true, "", this, SLOT(updateValues()));
+    c_speed_topic_property_ = std::make_unique<rviz_common::properties::RosTopicProperty>("topic", "", "std_msgs/msg/Float64", "", c_speed_enable_property_.get(), SLOT(updateTopic()), this);
+    c_speed_fg_property_ = std::make_unique<rviz_common::properties::ColorProperty>("fg color", QColor(0, 255, 0), "", c_speed_enable_property_.get(), SLOT(updateColor()), this);
+    c_speed_bg_property_ = std::make_unique<rviz_common::properties::ColorProperty>("bg color", QColor(32, 32, 32), "", c_speed_enable_property_.get(), SLOT(updateColor()), this);
+    c_speed_fontsize_property_ = std::make_unique<rviz_common::properties::IntProperty>("font size", 28, "", c_speed_enable_property_.get(), SLOT(updateValues()), this);
     unit_property_ = std::make_unique<rviz_common::properties::StringProperty>("Unit", "", "", this, SLOT(updateValues()));
     coefficient_property_ = std::make_unique<rviz_common::properties::FloatProperty>("Coefficient", 3.6f, "", unit_property_.get(), SLOT(updateValues()), this);
+    unit_precision_property_ = std::make_unique<rviz_common::properties::IntProperty>("precision", 0, "", unit_property_.get(), SLOT(updateValues()), this);
     unit_color_property_ = std::make_unique<rviz_common::properties::ColorProperty>("color", QColor(255, 255, 255), "", unit_property_.get(), SLOT(updateColor()), this);
+    unit_fontsize_property_ = std::make_unique<rviz_common::properties::IntProperty>("font size", 16, "", unit_property_.get(), SLOT(updateValues()), this);
     bg_color_property_ = std::make_unique<rviz_common::properties::ColorProperty>("Background", QColor(0, 0, 0), "", this, SLOT(updateBgColor()));
     scale_main_color_property_ = std::make_unique<rviz_common::properties::ColorProperty>("Scale", QColor(255, 255, 255), "", this, SLOT(updateColor()));
     scale_range_property_ = std::make_unique<rviz_common::properties::FloatProperty>("Range", 100.0f, "", scale_main_color_property_.get(), SLOT(updateValues()), this);
@@ -161,10 +279,9 @@ namespace speed_meter_plugin
     rviz_common::Display::load(config);
 
     updateMessageType(
-      l_speed_topic_property_->getString(),
-      t_speed_topic_property_->getString(),
-      c_speed_topic_property_->getString()
-    );
+        l_speed_topic_property_->getString(),
+        t_speed_topic_property_->getString(),
+        c_speed_topic_property_->getString());
     updateBgColor();
     updateColor();
     updateTopic();
@@ -202,12 +319,18 @@ namespace speed_meter_plugin
 
   void SpeedMeterPlugin::updateValues()
   {
+    l_speed_.enable = l_speed_enable_property_->getBool();
+    t_speed_.enable = t_speed_enable_property_->getBool();
+    c_speed_.enable = c_speed_enable_property_->getBool();
+    c_speed_.fontsize = c_speed_fontsize_property_->getInt();
     meter_scale_.range = scale_range_property_->getFloat();
     meter_scale_.zero_offset = scale_zero_offset_property_->getFloat();
     meter_scale_.coefficient = coefficient_property_->getFloat();
+    meter_scale_.precision = unit_precision_property_->getInt();
     meter_scale_.main.step = scale_main_step_property_->getFloat();
     meter_scale_.sub.step = scale_sub_step_property_->getFloat();
     meter_scale_.unit.name = unit_property_->getString();
+    meter_scale_.unit.fontsize = unit_fontsize_property_->getInt();
   }
 
   void SpeedMeterPlugin::onEnable()
