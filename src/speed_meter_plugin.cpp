@@ -111,7 +111,7 @@ namespace speed_meter_plugin
     }
     if (c_speed_->enable)
     {
-      double c_value = qMin(qMax(value_min, c_speed_->value), value_max);
+      double c_value = qMin(qMax(value_min, c_speed_->value * meter_scale_->coefficient), value_max);
       QPainterPath fg_path;
       theta = -300.0 * c_value / meter_scale_->range;
       fg_path.arcTo(-64, -64, 128, 128, -scale_origin, theta);
@@ -126,7 +126,7 @@ namespace speed_meter_plugin
     {
       painter.setPen(Qt::NoPen);
       painter.setBrush(t_speed_->fg);
-      double t_value = qMin(qMax(value_min, t_speed_->value), value_max);
+      double t_value = qMin(qMax(value_min, t_speed_->value * meter_scale_->coefficient), value_max);
       theta = 300.0 * t_value / meter_scale_->range;
       painter.save();
       painter.rotate(scale_origin + theta);
@@ -139,7 +139,7 @@ namespace speed_meter_plugin
     {
       painter.setPen(Qt::NoPen);
       painter.setBrush(l_speed_->fg);
-      double l_value = qMin(qMax(value_min, l_speed_->value), value_max);
+      double l_value = qMin(qMax(value_min, l_speed_->value * meter_scale_->coefficient), value_max);
       theta = 300.0 * l_value / meter_scale_->range;
       QPainterPath fg_path;
       fg_path.moveTo(105, 0);
@@ -158,7 +158,7 @@ namespace speed_meter_plugin
       painter.setFont(font_cs);
       painter.setPen(meter_scale_->unit.color);
       painter.setBrush(Qt::NoBrush);
-      painter.drawText(-128, -64, 256, 128, Qt::AlignCenter, QString::number(c_speed_->value, 'f', meter_scale_->precision));
+      painter.drawText(-128, -64, 256, 128, Qt::AlignCenter, QString::number(c_speed_->value * meter_scale_->coefficient, 'f', meter_scale_->precision));
     }
   }
 
@@ -189,17 +189,23 @@ namespace speed_meter_plugin
     c_speed_fg_property_ = std::make_unique<rviz_common::properties::ColorProperty>("fg color", QColor(0, 255, 0), "", c_speed_enable_property_.get(), SLOT(updateColor()), this);
     c_speed_bg_property_ = std::make_unique<rviz_common::properties::ColorProperty>("bg color", QColor(32, 32, 32), "", c_speed_enable_property_.get(), SLOT(updateColor()), this);
     c_speed_fontsize_property_ = std::make_unique<rviz_common::properties::IntProperty>("font size", 28, "", c_speed_enable_property_.get(), SLOT(updateValues()), this);
+    c_speed_fontsize_property_->setMin(1);
     unit_property_ = std::make_unique<rviz_common::properties::StringProperty>("Unit", "", "", this, SLOT(updateValues()));
     coefficient_property_ = std::make_unique<rviz_common::properties::FloatProperty>("Coefficient", 3.6f, "", unit_property_.get(), SLOT(updateValues()), this);
     unit_precision_property_ = std::make_unique<rviz_common::properties::IntProperty>("precision", 0, "", unit_property_.get(), SLOT(updateValues()), this);
+    unit_precision_property_->setMin(0);
     unit_color_property_ = std::make_unique<rviz_common::properties::ColorProperty>("color", QColor(255, 255, 255), "", unit_property_.get(), SLOT(updateColor()), this);
     unit_fontsize_property_ = std::make_unique<rviz_common::properties::IntProperty>("font size", 16, "", unit_property_.get(), SLOT(updateValues()), this);
+    unit_fontsize_property_->setMin(1);
     bg_color_property_ = std::make_unique<rviz_common::properties::ColorProperty>("Background", QColor(0, 0, 0), "", this, SLOT(updateBgColor()));
     scale_main_color_property_ = std::make_unique<rviz_common::properties::ColorProperty>("Scale", QColor(255, 255, 255), "", this, SLOT(updateColor()));
     scale_range_property_ = std::make_unique<rviz_common::properties::FloatProperty>("Range", 100.0f, "", scale_main_color_property_.get(), SLOT(updateValues()), this);
+    scale_range_property_->setMin(0.0f);
     scale_zero_offset_property_ = std::make_unique<rviz_common::properties::FloatProperty>("Zero Offset", 0.0f, "", scale_main_color_property_.get(), SLOT(updateValues()), this);
     scale_main_step_property_ = std::make_unique<rviz_common::properties::FloatProperty>("Main step", 10.0f, "", scale_main_color_property_.get(), SLOT(updateValues()), this);
+    scale_main_step_property_->setMin(0.0f);
     scale_sub_step_property_ = std::make_unique<rviz_common::properties::FloatProperty>("Sub step", 5.0f, "", scale_main_color_property_.get(), SLOT(updateValues()), this);
+    scale_sub_step_property_->setMin(0.0f);
     scale_sub_color_property_ = std::make_unique<rviz_common::properties::ColorProperty>("Sub color", QColor(0, 0, 0), "", scale_main_color_property_.get(), SLOT(updateColor()), this);
   }
 
