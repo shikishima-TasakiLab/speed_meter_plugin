@@ -26,7 +26,6 @@ namespace speed_meter_plugin
 
   void SpeedMeterWidget::paintEvent(QPaintEvent *event)
   {
-    // QWidget::paintEvent(event);
     (void)event;
 
     int w_side = qMin(width(), height());
@@ -474,7 +473,7 @@ namespace speed_meter_plugin
         &c_speed_,
         &meter_scale_,
         &bg_color_);
-    panel_->setMinimumHeight(128);
+    panel_->setMinimumHeight(32);
     setAssociatedWidget(panel_.get());
   }
 
